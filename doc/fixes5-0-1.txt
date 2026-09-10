@@ -90,7 +90,11 @@ after polymorph or revival from corpse, monsters were not interacting with
 fix undead corpses (zombies, etc.) now being edible
 alias rings of constitution, strength, and damage, spellbook/scroll of
 	identification
-
+saving the game restamped every level with the current turn, so the idle time
+	used to catch up monsters when returning to a level (healing, pets
+	growing wild, hiders re-hiding) restarted from zero after each
+	save and restore; keep each level's timestamp when copying level
+	files into and out of the save file
 
 Platform- and/or Interface-Specific Fixes
 -----------------------------------------
