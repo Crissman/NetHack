@@ -31,7 +31,7 @@ staticfn void save_gamelog(NHFILE *);
 staticfn void savegamestate(NHFILE *);
 staticfn void savelev_core(NHFILE *, xint8);
 staticfn void save_msghistory(NHFILE *);
-staticfn void save_adjust_levelflags(void);
+staticfn void save_adjust_levelflags(long);
 #if defined(HANGUPHANDLING)
 #define HUP if (!program_state.done_hup)
 #else
@@ -484,6 +484,7 @@ savelev_core(NHFILE *nhfp, xint8 lev)
     short tlev;
 #endif
     int i, c, r;
+    long lev_stamp;
     coord *tmpc;
 
     program_state.saving++; /* even if current mode is FREEING */
@@ -541,14 +542,20 @@ savelev_core(NHFILE *nhfp, xint8 lev)
             Sfo_schar(nhfp, &svl.lastseentyp[c][r], "lastseentyp");
         }
     }
-    /* svm.moves will actually be read back into svo.omoves on restore */
-    Sfo_long(nhfp, &svm.moves, "lev-timestmp");
+    /* level timestamp (read back into svo.omoves by getlev()): now for
+       the hero's level, otherwise the value getlev() read for a level
+       that is only being copied */
+    if (lev == ledger_no(&gu.uz_save))
+        lev_stamp = svm.moves;
+    else
+        lev_stamp = svo.omoves;
+    Sfo_long(nhfp, &lev_stamp, "lev-timestmp");
     save_stairs(nhfp);
     Sfo_dest_area(nhfp, &svu.updest, "lev-updest");
     Sfo_dest_area(nhfp, &svd.dndest, "lev-dndest");
-    save_adjust_levelflags();
+    save_adjust_levelflags(lev_stamp);
     Sfo_levelflags(nhfp, &svl.level.flags, "lev-level_flags");
-    rest_adjust_levelflags(0L);
+    rest_adjust_levelflags(svm.moves - lev_stamp);
 
     Sfo_int(nhfp, &svd.doors_alloc, "lev-doors_alloc");
     /* don't rely on underlying write() behavior to write
@@ -595,11 +602,12 @@ savelev_core(NHFILE *nhfp, xint8 lev)
     return;
 }
 
+/* make level flag timestamps relative to the level's timestamp */
 void
-save_adjust_levelflags(void)
+save_adjust_levelflags(long lev_stamp)
 {
     /* adjust any timestamps */
-    moves_to_relative_time(&svl.level.flags.stasis_until);
+    svl.level.flags.stasis_until -= lev_stamp;
 }
 
 staticfn void
